@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISL Bridge — Indian Sign Language Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --paper: #f5f2ec;
+  --saffron: #FF6B00;
+  --saffron-light: #FF9A3C;
+  --teal: #00897B;
+  --teal-light: #4DB6AC;
+  --gold: #F9A825;
+  --accent: #E91E63;
+  --text-muted: #6b6b7a;
+  --border: rgba(10,10,15,0.1);
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.2rem 3rem;
+  backdrop-filter: blur(20px);
+  background: rgba(245,242,236,0.85);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem;
+  color: var(--ink); text-decoration: none;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.nav-logo span { color: var(--saffron); }
+.nav-links { display: flex; gap: 0.5rem; }
+.nav-links a {
+  font-size: 0.9rem; font-weight: 500;
+  color: var(--ink); text-decoration: none;
+  padding: 0.5rem 1.2rem; border-radius: 100px;
+  transition: all 0.2s;
+}
+.nav-links a:hover { background: var(--ink); color: var(--paper); }
+.nav-cta {
+  background: var(--saffron) !important;
+  color: white !important;
+}
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 7rem 3rem 3rem;
+  position: relative; overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background: 
+    radial-gradient(ellipse 800px 600px at 80% 50%, rgba(255,107,0,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 600px 800px at 20% 80%, rgba(0,137,123,0.07) 0%, transparent 70%);
+}
+.hero-grid {
+  position: absolute; inset: 0; opacity: 0.04;
+  background-image: 
+    linear-gradient(var(--ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ink) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.hero-content { position: relative; z-index: 1; max-width: 680px; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(255,107,0,0.1); border: 1px solid rgba(255,107,0,0.3);
+  color: var(--saffron); padding: 0.4rem 1rem; border-radius: 100px;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.8s ease both;
+}
+.hero-badge::before { content: '●'; font-size: 0.6rem; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.hero h1 {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(3.5rem, 7vw, 6rem);
+  line-height: 0.95; letter-spacing: -0.03em;
+  margin-bottom: 1.5rem;
+  animation: fadeUp 0.8s ease 0.1s both;
+}
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--saffron), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero-sub {
+  font-size: 1.2rem; color: var(--text-muted); line-height: 1.7;
+  max-width: 520px; margin-bottom: 3rem;
+  animation: fadeUp 0.8s ease 0.2s both;
+  font-weight: 300;
+}
+.hero-actions {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  animation: fadeUp 0.8s ease 0.3s both;
+}
+.btn-primary {
+  background: var(--ink); color: var(--paper);
+  padding: 0.9rem 2rem; border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 1rem;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;
+  transition: all 0.3s; border: 2px solid var(--ink);
+}
+.btn-primary:hover { background: var(--saffron); border-color: var(--saffron); transform: translateY(-2px); }
+.btn-secondary {
+  background: transparent; color: var(--ink);
+  padding: 0.9rem 2rem; border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 1rem;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;
+  transition: all 0.3s; border: 2px solid var(--border);
+}
+.btn-secondary:hover { border-color: var(--ink); transform: translateY(-2px); }
+
+/* HERO VISUAL */
+.hero-visual {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 45%; display: flex; align-items: center; justify-content: center;
+  animation: fadeUp 0.8s ease 0.4s both;
+}
+.hand-showcase {
+  width: 340px; height: 340px; position: relative;
+}
+.hand-circle {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid rgba(255,107,0,0.2);
+  animation: rotate 20s linear infinite;
+}
+.hand-circle::before {
+  content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 12px; background: var(--saffron); border-radius: 50%;
+}
+.hand-circle-2 {
+  inset: 30px;
+  border-color: rgba(0,137,123,0.2);
+  animation: rotate 15s linear infinite reverse;
+}
+.hand-circle-2::before { background: var(--teal); }
+.hand-center {
+  position: absolute; inset: 60px;
+  background: linear-gradient(135deg, rgba(255,107,0,0.1), rgba(0,137,123,0.1));
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 6rem;
+}
+@keyframes rotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+/* LANG TAGS floating */
+.lang-tag {
+  position: absolute; background: white; border: 1px solid var(--border);
+  padding: 0.4rem 0.8rem; border-radius: 100px;
+  font-size: 0.8rem; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  animation: float 4s ease-in-out infinite;
+}
+.lt1 { top: 20%; left: 5%; animation-delay: 0s; }
+.lt2 { top: 35%; right: 5%; animation-delay: 0.5s; }
+.lt3 { bottom: 30%; left: 10%; animation-delay: 1s; }
+.lt4 { bottom: 20%; right: 8%; animation-delay: 1.5s; }
+.lt5 { top: 55%; left: -2%; animation-delay: 2s; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+/* FEATURES */
+.features {
+  padding: 6rem 3rem;
+  background: var(--ink); color: var(--paper);
+}
+.section-label {
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--saffron);
+  margin-bottom: 1rem;
+}
+.features-header { max-width: 600px; margin-bottom: 4rem; }
+.features-header h2 {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1;
+  margin-bottom: 1rem;
+}
+.features-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5px; background: rgba(255,255,255,0.08);
+}
+.feature-card {
+  background: var(--ink);
+  padding: 2.5rem; transition: background 0.3s;
+}
+.feature-card:hover { background: rgba(255,107,0,0.05); }
+.feature-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: rgba(255,107,0,0.15); color: var(--saffron-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; margin-bottom: 1.5rem;
+}
+.feature-card h3 {
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.15rem;
+  margin-bottom: 0.75rem;
+}
+.feature-card p { color: rgba(245,242,236,0.5); line-height: 1.6; font-size: 0.95rem; }
+
+/* LANGUAGE SUPPORT */
+.languages { padding: 6rem 3rem; }
+.languages h2 {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 3rem; text-align: center;
+}
+.lang-grid {
+  display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;
+  max-width: 800px; margin: 0 auto;
+}
+.lang-card {
+  background: white; border: 1px solid var(--border);
+  padding: 1rem 1.5rem; border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+  min-width: 100px; transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.lang-card:hover { transform: translateY(-4px); border-color: var(--saffron); box-shadow: 0 8px 24px rgba(255,107,0,0.15); }
+.lang-native { font-size: 1.4rem; font-weight: 700; }
+.lang-en { font-size: 0.75rem; color: var(--text-muted); }
+
+/* HOW IT WORKS */
+.how-it-works { padding: 6rem 3rem; background: rgba(0,137,123,0.04); }
+.how-it-works h2 {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3rem); text-align: center; margin-bottom: 4rem;
+}
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto; }
+.step { text-align: center; }
+.step-num {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--ink); color: var(--paper);
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+.step h3 { font-family: 'Syne', sans-serif; font-weight: 700; margin-bottom: 0.5rem; }
+.step p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; }
+.step-connector { display: none; }
+
+/* CTA */
+.cta-section {
+  padding: 6rem 3rem; text-align: center;
+  background: linear-gradient(135deg, var(--saffron) 0%, var(--gold) 100%);
+  color: white;
+}
+.cta-section h2 {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1.5rem;
+}
+.cta-section p { font-size: 1.2rem; opacity: 0.85; margin-bottom: 2.5rem; }
+.btn-white {
+  background: white; color: var(--saffron);
+  padding: 1rem 2.5rem; border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;
+  transition: all 0.3s;
+}
+.btn-white:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.2); }
+
+/* FOOTER */
+footer {
+  background: var(--ink); color: rgba(245,242,236,0.4);
+  padding: 2rem 3rem; display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 1rem;
+}
+footer a { color: rgba(245,242,236,0.4); text-decoration: none; }
+footer a:hover { color: var(--saffron); }
+.footer-logo { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--paper); }
+.footer-logo span { color: var(--saffron); }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+@media (max-width: 768px) {
+  nav { padding: 1rem 1.5rem; }
+  .hero { padding: 6rem 1.5rem 3rem; }
+  .hero-visual { display: none; }
+  .features, .languages, .how-it-works, .cta-section { padding: 4rem 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">ISL<span>Bridge</span></a>
+    <div class="nav-links">
+    <a href="/">🏠 Home</a>
+    <a href="/detect">🎥 Detect</a>
+    <a href="/dictionary">📖 Dictionary</a>
+    <a href="/avatar">🤖 3D Avatar</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge">🇮🇳 Indian Sign Language</div>
+    <h1>Break the<br>silence with<br><em>ISL Bridge</em></h1>
+    <p class="hero-sub">Real-time Indian Sign Language detection translated into text and speech across 9 Indian languages. Bridging communication, one gesture at a time.</p>
+    <div class="hero-actions">
+      <a href="/detect" class="btn-primary">🎥 Start Detection →</a>
+      <a href="/dictionary" class="btn-secondary">📖 Browse Dictionary</a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div style="position:relative; width:400px; height:400px;">
+      <div class="lang-tag lt1">नमस्ते · Hindi</div>
+      <div class="lang-tag lt2">வணக்கம் · Tamil</div>
+      <div class="lang-tag lt3">ನಮಸ್ಕಾರ · Kannada</div>
+      <div class="lang-tag lt4">నమస్కారం · Telugu</div>
+      <div class="lang-tag lt5">ਸਤ ਸ੍ਰੀ ਅਕਾਲ · Punjabi</div>
+      <div class="hand-showcase" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
+        <div class="hand-circle"></div>
+        <div class="hand-circle hand-circle-2"></div>
+        <div class="hand-center">🤟</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="features-header">
+    <div class="section-label">What we offer</div>
+    <h2>Everything you need to communicate</h2>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">👁️</div>
+      <h3>Real-Time Detection</h3>
+      <p>Live camera feed processes hand gestures instantly using computer vision and machine learning models trained on ISL.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔤</div>
+      <h3>Alphabets & Numbers</h3>
+      <p>Recognize all 26 ISL alphabets (A–Z) and numbers 0–9 with high accuracy and confidence scoring.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <h3>Common Phrases</h3>
+      <p>Detect 20+ everyday phrases like Hello, Thank You, Help, and more — the building blocks of daily conversation.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌐</div>
+      <h3>9 Indian Languages</h3>
+      <p>Translations in Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, and Punjabi.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔊</div>
+      <h3>Text-to-Speech</h3>
+      <p>Hear detected signs spoken aloud in your chosen Indian language using the Web Speech API.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📚</div>
+      <h3>Sign Dictionary</h3>
+      <p>Browse the full ISL library with illustrations and descriptions for every letter, number, and phrase.</p>
+    </div>
+  </div>
+</section>
+
+<section class="languages">
+  <p class="section-label" style="text-align:center">Multi-language support</p>
+  <h2>Speak every tongue</h2>
+  <div class="lang-grid">
+    <div class="lang-card"><div class="lang-native">हिंदी</div><div class="lang-en">Hindi</div></div>
+    <div class="lang-card"><div class="lang-native">தமிழ்</div><div class="lang-en">Tamil</div></div>
+    <div class="lang-card"><div class="lang-native">తెలుగు</div><div class="lang-en">Telugu</div></div>
+    <div class="lang-card"><div class="lang-native">ಕನ್ನಡ</div><div class="lang-en">Kannada</div></div>
+    <div class="lang-card"><div class="lang-native">മലയാളം</div><div class="lang-en">Malayalam</div></div>
+    <div class="lang-card"><div class="lang-native">বাংলা</div><div class="lang-en">Bengali</div></div>
+    <div class="lang-card"><div class="lang-native">मराठी</div><div class="lang-en">Marathi</div></div>
+    <div class="lang-card"><div class="lang-native">ગુજરાતી</div><div class="lang-en">Gujarati</div></div>
+    <div class="lang-card"><div class="lang-native">ਪੰਜਾਬੀ</div><div class="lang-en">Punjabi</div></div>
+  </div>
+</section>
+
+<section class="how-it-works">
+  <p class="section-label" style="text-align:center">Simple workflow</p>
+  <h2>How it works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Open Camera</h3>
+      <p>Allow webcam access and position your hand clearly in the detection zone.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Make a Sign</h3>
+      <p>Perform any ISL alphabet, number, or phrase gesture in view of the camera.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Choose Language</h3>
+      <p>Select your preferred Indian language from the dropdown for translation.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Read & Listen</h3>
+      <p>See the detected sign as text and optionally hear it spoken aloud via TTS.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <h2>Start Signing Today</h2>
+  <p>No installation needed. Works right in your browser.</p>
+  <a href="/detect" class="btn-white">🎥 Launch Detector →</a>
+</section>
+
+<footer>
+  <div class="footer-logo">ISL<span>Bridge</span></div>
+  <div>Indian Sign Language Translation Platform</div>
+  <div><a href="/detect">Detect</a> · <a href="/dictionary">Dictionary</a></div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISL Dictionary — ISLBridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f; --paper: #f5f2ec; --saffron: #FF6B00;
+  --teal: #00897B; --gold: #F9A825; --border: rgba(10,10,15,0.1); --muted: #6b6b7a;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); }
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.2rem 2.5rem; background: rgba(245,242,236,0.9);
+  backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--ink); text-decoration: none; }
+.nav-logo span { color: var(--saffron); }
+.nav-links a { text-decoration: none; color: var(--ink); font-weight: 500; padding: 0.5rem 1rem; border-radius: 100px; font-size: 0.9rem; transition: all 0.2s; margin-left: 0.3rem; }
+.nav-links a:hover { background: var(--ink); color: var(--paper); }
+.nav-links a.active { background: var(--saffron); color: white; }
+
+.dict-header { padding: 3rem 3rem 2rem; background: var(--ink); color: white; }
+.dict-header h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.5rem; }
+.dict-header p { color: rgba(255,255,255,0.5); margin-top: 0.5rem; }
+
+.search-bar {
+  margin-top: 1.5rem;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px; padding: 0.75rem 1.25rem;
+  display: flex; align-items: center; gap: 0.75rem; max-width: 460px;
+}
+.search-bar input {
+  background: none; border: none; outline: none;
+  color: white; font-family: 'DM Sans', sans-serif; font-size: 1rem; flex: 1;
+}
+.search-bar input::placeholder { color: rgba(255,255,255,0.3); }
+
+.tab-bar {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  background: white; padding: 0 3rem;
+  overflow-x: auto;
+}
+.tab {
+  padding: 1rem 1.5rem; font-weight: 600; font-size: 0.9rem;
+  cursor: pointer; border-bottom: 3px solid transparent;
+  white-space: nowrap; color: var(--muted); transition: all 0.2s;
+}
+.tab:hover { color: var(--ink); }
+.tab.active { color: var(--saffron); border-bottom-color: var(--saffron); }
+
+.dict-content { padding: 2.5rem 3rem; }
+
+/* ALPHABETS GRID */
+.alpha-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem;
+}
+.alpha-card {
+  background: white; border: 1px solid var(--border); border-radius: 16px;
+  padding: 1.25rem; text-align: center; cursor: pointer;
+  transition: all 0.25s; position: relative; overflow: hidden;
+}
+.alpha-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--card-color, #FF6B00) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s;
+}
+.alpha-card:hover::before { opacity: 0.07; }
+.alpha-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); border-color: var(--card-color, #FF6B00); }
+.alpha-letter {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem;
+  color: var(--card-color, #FF6B00); line-height: 1;
+}
+.alpha-emoji { font-size: 2rem; margin: 0.4rem 0; }
+.alpha-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; }
+
+/* PHRASES GRID */
+.phrase-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;
+}
+.phrase-card {
+  background: white; border: 1px solid var(--border); border-radius: 16px;
+  padding: 1.5rem; cursor: pointer; transition: all 0.25s;
+}
+.phrase-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); border-color: var(--card-color, #FF6B00); }
+.phrase-icon { font-size: 2.2rem; margin-bottom: 0.75rem; }
+.phrase-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.4rem; }
+.phrase-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.phrase-tag {
+  display: inline-block; margin-top: 0.75rem;
+  background: rgba(255,107,0,0.1); color: var(--saffron);
+  padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.72rem; font-weight: 700;
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 2rem; opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
+}
+.modal-overlay.visible { opacity: 1; pointer-events: all; }
+.modal {
+  background: white; border-radius: 24px; max-width: 560px; width: 100%;
+  overflow: hidden; transform: scale(0.9); transition: transform 0.3s;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-overlay.visible .modal { transform: scale(1); }
+.modal-visual {
+  background: var(--ink); padding: 3rem;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  gap: 1rem; min-height: 220px;
+}
+.modal-sign-big {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 6rem;
+  background: linear-gradient(135deg, var(--saffron), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+.modal-emoji { font-size: 4rem; }
+.modal-body { padding: 2rem; }
+.modal-body h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.8rem; margin-bottom: 0.5rem; }
+.modal-body .desc { color: var(--muted); line-height: 1.7; margin-bottom: 1.5rem; font-size: 0.95rem; }
+.translations-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+.trans-item {
+  background: var(--paper); border-radius: 10px; padding: 0.6rem 0.8rem;
+}
+.trans-lang { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.trans-text { font-size: 1rem; font-weight: 600; margin-top: 0.2rem; }
+.modal-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.modal-btn {
+  padding: 0.7rem 1.25rem; border-radius: 100px; border: none; cursor: pointer;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.mbtn-speak { background: var(--ink); color: white; }
+.mbtn-speak:hover { background: var(--saffron); }
+.mbtn-close { background: var(--paper); color: var(--ink); }
+.mbtn-close:hover { background: rgba(0,0,0,0.1); }
+.hand-instruction {
+  background: rgba(0,137,123,0.06); border: 1px solid rgba(0,137,123,0.15);
+  border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+}
+.hand-instruction-title { font-size: 0.75rem; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.4rem; }
+.hand-instruction p { font-size: 0.9rem; color: var(--ink); line-height: 1.6; }
+
+/* SECTION HEADERS */
+.section-header { margin-bottom: 1.5rem; }
+.section-header h2 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.5rem; }
+.section-header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.3rem; }
+
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+.empty-state div { font-size: 3rem; margin-bottom: 1rem; }
+
+@media (max-width: 768px) {
+  nav { padding: 1rem; }
+  .dict-header, .dict-content { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .tab-bar { padding: 0 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">ISL<span>Bridge</span></a>
+    <div class="nav-links">
+    <a href="/">🏠 Home</a>
+    <a href="/detect">🎥 Detect</a>
+    <a href="/dictionary">📖 Dictionary</a>
+    <a href="/avatar">🤖 3D Avatar</a>
+  </div>
+</nav>
+
+<div class="dict-header">
+  <h1>📖 ISL Dictionary</h1>
+  <p>Browse all Indian Sign Language signs — alphabets, numbers & common phrases</p>
+  <div class="search-bar">
+    <span>🔍</span>
+    <input type="text" id="searchInput" placeholder="Search signs, words, phrases..." oninput="handleSearch()">
+  </div>
+</div>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('alphabets', this)">🔤 Alphabets (A–Z)</div>
+  <div class="tab" onclick="switchTab('numbers', this)">🔢 Numbers (0–9)</div>
+  <div class="tab" onclick="switchTab('phrases', this)">💬 Phrases</div>
+  <div class="tab" onclick="switchTab('all', this)">📚 All Signs</div>
+</div>
+
+<div class="dict-content">
+  <div id="tab-alphabets">
+    <div class="section-header">
+      <h2>Alphabets</h2>
+      <p>All 26 letters of the Indian Sign Language alphabet</p>
+    </div>
+    <div class="alpha-grid" id="alphaGrid"></div>
+  </div>
+  <div id="tab-numbers" style="display:none">
+    <div class="section-header">
+      <h2>Numbers</h2>
+      <p>Numbers 0 through 9 in Indian Sign Language</p>
+    </div>
+    <div class="alpha-grid" id="numGrid"></div>
+  </div>
+  <div id="tab-phrases" style="display:none">
+    <div class="section-header">
+      <h2>Common Phrases</h2>
+      <p>Everyday expressions used in Indian Sign Language</p>
+    </div>
+    <div class="phrase-grid" id="phraseGrid"></div>
+  </div>
+  <div id="tab-all" style="display:none">
+    <div class="section-header">
+      <h2>All Signs</h2>
+      <p id="allCountLabel"></p>
+    </div>
+    <div id="allGrid"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal">
+    <div class="modal-visual" id="modalVisual">
+      <div class="modal-sign-big" id="modalSignBig"></div>
+      <div class="modal-emoji" id="modalEmoji"></div>
+    </div>
+    <div class="modal-body">
+      <h2 id="modalTitle"></h2>
+      <div class="hand-instruction">
+        <div class="hand-instruction-title">✋ How to Sign</div>
+        <p id="modalDesc"></p>
+      </div>
+      <div class="translations-grid" id="modalTranslations"></div>
+      <div class="modal-actions">
+        <button class="modal-btn mbtn-speak" onclick="speakModal()">🔊 Speak</button>
+        <button class="modal-btn mbtn-speak" style="background:var(--teal)" onclick="goDetect()">🎥 Try Detection</button>
+        <button class="modal-btn mbtn-close" onclick="closeModal()">✕ Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let dictData = {};
+let translations = {};
+let currentModalSign = null;
+
+const PHRASE_EMOJIS = {
+  'Hello':'👋','Thank You':'🙏','Please':'🤲','Sorry':'😔','Yes':'✅','No':'❌',
+  'Help':'🆘','Water':'💧','Food':'🍽️','Good':'👍','Bad':'👎','I Love You':'❤️',
+  'Name':'🏷️','Friend':'🤝','Family':'👨‍👩‍👧','Home':'🏠','School':'🏫',
+  'Doctor':'👨‍⚕️','Where':'❓','What':'🤔'
+};
+
+const LANG_NAMES = {
+  'hi':'Hindi','ta':'Tamil','te':'Telugu','kn':'Kannada',
+  'ml':'Malayalam','bn':'Bengali','mr':'Marathi','gu':'Gujarati','pa':'Punjabi'
+};
+
+const LANG_CODES_TTS = {
+  'en': 'en-IN', 'hi': 'hi-IN', 'ta': 'ta-IN', 'te': 'te-IN',
+  'kn': 'kn-IN', 'ml': 'ml-IN', 'bn': 'bn-IN', 'mr': 'mr-IN',
+  'gu': 'gu-IN', 'pa': 'pa-IN'
+};
+
+async function loadData() {
+  const [d, t] = await Promise.all([
+    fetch('/api/dictionary').then(r => r.json()),
+    fetch('/api/translations').then(r => r.json())
+  ]);
+  dictData = d;
+  translations = t;
+  renderAll();
+}
+
+function renderAll() {
+  renderAlpha();
+  renderNumbers();
+  renderPhrases();
+  renderAllSigns();
+}
+
+function renderAlpha() {
+  const grid = document.getElementById('alphaGrid');
+  grid.innerHTML = Object.entries(dictData.alphabets || {}).map(([letter, info]) => `
+    <div class="alpha-card" style="--card-color:${info.color}" onclick="openModal('${letter}','alpha')">
+      <div class="alpha-letter" style="color:${info.color}">${letter}</div>
+      <div class="alpha-emoji">✋</div>
+      <div class="alpha-label">Alphabet</div>
+    </div>
+  `).join('');
+}
+
+function renderNumbers() {
+  const grid = document.getElementById('numGrid');
+  grid.innerHTML = Object.entries(dictData.numbers || {}).map(([num, info]) => `
+    <div class="alpha-card" style="--card-color:${info.color}" onclick="openModal('${num}','num')">
+      <div class="alpha-letter" style="color:${info.color}">${num}</div>
+      <div class="alpha-emoji">🔢</div>
+      <div class="alpha-label">Number</div>
+    </div>
+  `).join('');
+}
+
+function renderPhrases() {
+  const grid = document.getElementById('phraseGrid');
+  grid.innerHTML = Object.entries(dictData.phrases || {}).map(([phrase, info]) => `
+    <div class="phrase-card" style="--card-color:${info.color}" onclick="openModal('${phrase}','phrase')">
+      <div class="phrase-icon">${PHRASE_EMOJIS[phrase] || '🤟'}</div>
+      <div class="phrase-name">${phrase}</div>
+      <div class="phrase-desc">${info.description}</div>
+      <span class="phrase-tag" style="background:${info.color}20;color:${info.color}">Phrase</span>
+    </div>
+  `).join('');
+}
+
+function renderAllSigns() {
+  const container = document.getElementById('allGrid');
+  const totalCount = Object.keys(dictData.alphabets||{}).length + Object.keys(dictData.numbers||{}).length + Object.keys(dictData.phrases||{}).length;
+  document.getElementById('allCountLabel').textContent = `${totalCount} signs total`;
+
+  container.innerHTML = `
+    <div style="margin-bottom:2rem">
+      <div class="section-header"><h2 style="font-size:1.1rem">Alphabets</h2></div>
+      <div class="alpha-grid">${Object.entries(dictData.alphabets||{}).map(([l,i])=>`
+        <div class="alpha-card" style="--card-color:${i.color}" onclick="openModal('${l}','alpha')">
+          <div class="alpha-letter" style="color:${i.color}">${l}</div>
+          <div class="alpha-emoji">✋</div><div class="alpha-label">Alphabet</div>
+        </div>`).join('')}</div>
+    </div>
+    <div style="margin-bottom:2rem">
+      <div class="section-header"><h2 style="font-size:1.1rem">Numbers</h2></div>
+      <div class="alpha-grid">${Object.entries(dictData.numbers||{}).map(([n,i])=>`
+        <div class="alpha-card" style="--card-color:${i.color}" onclick="openModal('${n}','num')">
+          <div class="alpha-letter" style="color:${i.color}">${n}</div>
+          <div class="alpha-emoji">🔢</div><div class="alpha-label">Number</div>
+        </div>`).join('')}</div>
+    </div>
+    <div>
+      <div class="section-header"><h2 style="font-size:1.1rem">Phrases</h2></div>
+      <div class="phrase-grid">${Object.entries(dictData.phrases||{}).map(([p,i])=>`
+        <div class="phrase-card" style="--card-color:${i.color}" onclick="openModal('${p}','phrase')">
+          <div class="phrase-icon">${PHRASE_EMOJIS[p]||'🤟'}</div>
+          <div class="phrase-name">${p}</div>
+          <div class="phrase-desc">${i.description}</div>
+          <span class="phrase-tag" style="background:${i.color}20;color:${i.color}">Phrase</span>
+        </div>`).join('')}</div>
+    </div>
+  `;
+}
+
+function openModal(sign, type) {
+  currentModalSign = sign;
+  let info;
+  if (type === 'alpha') info = dictData.alphabets[sign];
+  else if (type === 'num') info = dictData.numbers[sign];
+  else info = dictData.phrases[sign];
+
+  document.getElementById('modalSignBig').textContent = sign.length <= 2 ? sign : sign[0];
+  document.getElementById('modalEmoji').textContent = PHRASE_EMOJIS[sign] || (type === 'num' ? '🔢' : '✋');
+  document.getElementById('modalTitle').textContent = sign;
+  document.getElementById('modalDesc').textContent = info.description;
+
+  // Build translations
+  const transGrid = document.getElementById('modalTranslations');
+  const transItems = Object.entries(LANG_NAMES).map(([code, name]) => {
+    const t = translations[code]?.[sign] || '—';
+    return `<div class="trans-item"><div class="trans-lang">${name}</div><div class="trans-text">${t}</div></div>`;
+  }).join('');
+  transGrid.innerHTML = transItems;
+
+  document.getElementById('modalOverlay').classList.add('visible');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('visible');
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function speakModal() {
+  if (currentModalSign) {
+    const utterance = new SpeechSynthesisUtterance(currentModalSign);
+    utterance.lang = 'en-IN';
+    speechSynthesis.speak(utterance);
+  }
+}
+
+function goDetect() { window.location.href = '/detect'; }
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['alphabets','numbers','phrases','all'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+function handleSearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  if (!q) { renderAll(); return; }
+
+  // Search alphabets
+  const alphaResults = Object.entries(dictData.alphabets || {}).filter(([k,v]) => k.toLowerCase().includes(q) || v.description.toLowerCase().includes(q));
+  const numResults = Object.entries(dictData.numbers || {}).filter(([k,v]) => k.toLowerCase().includes(q) || v.description.toLowerCase().includes(q));
+  const phraseResults = Object.entries(dictData.phrases || {}).filter(([k,v]) => k.toLowerCase().includes(q) || v.description.toLowerCase().includes(q));
+
+  document.getElementById('alphaGrid').innerHTML = alphaResults.map(([l,i])=>`
+    <div class="alpha-card" style="--card-color:${i.color}" onclick="openModal('${l}','alpha')">
+      <div class="alpha-letter" style="color:${i.color}">${l}</div><div class="alpha-emoji">✋</div><div class="alpha-label">Alphabet</div>
+    </div>`).join('') || '<div style="color:var(--muted);padding:1rem">No results</div>';
+
+  document.getElementById('numGrid').innerHTML = numResults.map(([n,i])=>`
+    <div class="alpha-card" style="--card-color:${i.color}" onclick="openModal('${n}','num')">
+      <div class="alpha-letter" style="color:${i.color}">${n}</div><div class="alpha-emoji">🔢</div><div class="alpha-label">Number</div>
+    </div>`).join('') || '<div style="color:var(--muted);padding:1rem">No results</div>';
+
+  document.getElementById('phraseGrid').innerHTML = phraseResults.map(([p,i])=>`
+    <div class="phrase-card" style="--card-color:${i.color}" onclick="openModal('${p}','phrase')">
+      <div class="phrase-icon">${PHRASE_EMOJIS[p]||'🤟'}</div>
+      <div class="phrase-name">${p}</div><div class="phrase-desc">${i.description}</div>
+    </div>`).join('') || '<div style="color:var(--muted);padding:1rem">No results</div>';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+loadData();
+</script>
+</body>
+</html>

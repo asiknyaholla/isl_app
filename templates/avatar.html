@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Avatar — ISLBridge</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--saffron:#FF6B00;--gold:#F9A825;--ink:#08080f;--border:rgba(255,255,255,0.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--ink);color:#fff}
+
+/* NAV */
+nav{height:56px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 1.5rem;background:rgba(8,8,15,0.95);border-bottom:1px solid var(--border);
+    position:relative;z-index:50}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:#fff;text-decoration:none}
+.logo span{color:var(--saffron)}
+.nav-links{display:flex;gap:4px}
+.nav-links a{color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.82rem;font-weight:500;
+             padding:6px 12px;border-radius:20px;transition:all .2s}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,0.08)}
+.nav-links a.active{background:var(--saffron);color:#fff}
+
+/* MAIN LAYOUT */
+.app{display:flex;height:calc(100vh - 56px)}
+
+/* SIDEBAR */
+.sidebar{width:260px;flex-shrink:0;background:rgba(255,255,255,0.025);
+         border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sb-head{padding:12px;border-bottom:1px solid var(--border)}
+.sb-head h3{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;margin-bottom:8px}
+.sb-search{width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);
+           border-radius:8px;padding:7px 10px;color:#fff;font-size:0.82rem;outline:none}
+.sb-search::placeholder{color:rgba(255,255,255,0.25)}
+.sb-search:focus{border-color:var(--saffron)}
+.sb-tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border)}
+.sbtab{flex:1;padding:5px 0;text-align:center;border-radius:6px;font-size:0.72rem;
+       font-weight:700;cursor:pointer;color:rgba(255,255,255,0.35);transition:all .2s;border:none;background:none}
+.sbtab:hover{color:#fff}
+.sbtab.on{background:var(--saffron);color:#fff}
+.sb-list{flex:1;overflow-y:auto;padding:6px}
+.sb-list::-webkit-scrollbar{width:3px}
+.sb-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+.sb-item{width:100%;background:none;border:none;color:#fff;padding:7px 10px;
+         border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:8px;
+         text-align:left;transition:all .15s;font-family:'DM Sans',sans-serif}
+.sb-item:hover{background:rgba(255,255,255,0.07)}
+.sb-item.on{background:rgba(255,107,0,0.18);color:var(--saffron)}
+.sb-key{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;
+        min-width:28px;color:var(--saffron)}
+.sb-item.on .sb-key{color:#fff}
+.sb-info{display:flex;flex-direction:column}
+.sb-name{font-size:0.83rem;font-weight:500}
+.sb-cat{font-size:0.68rem;color:rgba(255,255,255,0.35);margin-top:1px}
+.sb-item.on .sb-cat{color:rgba(255,255,255,0.6)}
+
+/* CANVAS AREA */
+.centre{flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden}
+#c{display:block;width:100%;flex:1}
+
+/* BADGE overlay */
+.badge{position:absolute;top:14px;left:14px;pointer-events:none;
+       background:rgba(8,8,15,0.82);backdrop-filter:blur(10px);
+       border:1px solid rgba(255,107,0,0.3);border-radius:14px;padding:12px 18px}
+.badge-sign{font-family:'Syne',sans-serif;font-weight:800;font-size:2.8rem;line-height:1;
+            background:linear-gradient(135deg,var(--saffron),var(--gold));
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge-cat{font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:3px}
+.badge-desc{font-size:0.7rem;color:rgba(255,107,0,0.6);margin-top:2px;max-width:220px;line-height:1.4}
+
+.hint{position:absolute;top:14px;right:14px;pointer-events:none;
+      background:rgba(8,8,15,0.65);border:1px solid var(--border);
+      border-radius:10px;padding:8px 12px;font-size:0.68rem;color:rgba(255,255,255,0.35)}
+.hint div{margin-bottom:3px}
+.hint span{color:rgba(255,255,255,0.6);font-weight:600}
+
+/* BOTTOM BAR */
+.bar{height:52px;background:rgba(8,8,15,0.9);border-top:1px solid var(--border);
+     display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0}
+.bbtn{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#fff;
+      padding:6px 14px;border-radius:20px;cursor:pointer;font-family:'Syne',sans-serif;
+      font-weight:600;font-size:0.78rem;transition:all .2s;white-space:nowrap}
+.bbtn:hover{background:rgba(255,107,0,0.2);border-color:var(--saffron)}
+.bbtn.on{background:var(--saffron);border-color:var(--saffron)}
+.sp-wrap{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:0.72rem;color:rgba(255,255,255,0.35)}
+input[type=range]{-webkit-appearance:none;width:90px;height:3px;border-radius:2px;
+                  background:rgba(255,255,255,0.15);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:var(--saffron);cursor:pointer}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">ISL<span>Bridge</span></a>
+  <div class="nav-links">
+    <a href="/">🏠 Home</a>
+    <a href="/detect">🎥 Detect</a>
+    <a href="/dictionary">📖 Dictionary</a>
+    <a href="/avatar" class="active">🤖 3D Avatar</a>
+  </div>
+</nav>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-head">
+      <h3>Sign Library</h3>
+      <input class="sb-search" id="srch" type="text" placeholder="Search…" oninput="filterList()">
+    </div>
+    <div class="sb-tabs">
+      <button class="sbtab on"  onclick="setTab('all',this)">All</button>
+      <button class="sbtab"     onclick="setTab('alpha',this)">A–Z</button>
+      <button class="sbtab"     onclick="setTab('num',this)">0–9</button>
+      <button class="sbtab"     onclick="setTab('phrase',this)">Phrases</button>
+    </div>
+    <div class="sb-list" id="list"></div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="centre">
+    <canvas id="c"></canvas>
+    <div class="badge">
+      <div class="badge-sign" id="bSign">A</div>
+      <div class="badge-cat"  id="bCat">Alphabet</div>
+      <div class="badge-desc" id="bDesc">Closed fist, thumb beside index finger</div>
+    </div>
+    <div class="hint">
+      <div><span>Drag</span> rotate</div>
+      <div><span>Scroll</span> zoom</div>
+      <div><span>Right-drag</span> pan</div>
+    </div>
+    <div class="bar">
+      <button class="bbtn" id="btnAnim"     onclick="toggleAnim()">▶ Animate</button>
+      <button class="bbtn"                  onclick="resetCam()">⟳ Reset</button>
+      <button class="bbtn" id="btnAuto"     onclick="toggleAuto()">⏭ Auto-Play</button>
+      <button class="bbtn"                  onclick="speak()">🔊 Speak</button>
+      <div class="sp-wrap">
+        Speed
+        <input type="range" id="spd" min="0.3" max="3" step="0.1" value="1" oninput="spd=+this.value">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════
+const ALPHA  = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+const NUMS   = [...'0123456789'];
+const PHRASE = ['Hello','Thank You','Please','Sorry','Yes','No','Help','Water',
+                'Food','Good','Bad','I Love You','Name','Friend','Family',
+                'Home','School','Doctor','Where','What'];
+const ALL    = [...ALPHA, ...NUMS, ...PHRASE];
+
+const DESC = {
+  A:'Closed fist, thumb beside index finger',
+  B:'Four fingers straight up, thumb tucked across palm',
+  C:'Hand curved in C-shape, fingers and thumb rounded',
+  D:'Index up, other fingers curl to touch thumb',
+  E:'All fingers bent downward in a hook, thumb tucked',
+  F:'Index+thumb form a circle, other fingers up',
+  G:'Index points sideways, thumb parallel',
+  H:'Index+middle pointing sideways together',
+  I:'Only pinky raised, all others in fist',
+  J:'Pinky up, trace a J curve in air',
+  K:'Index+middle up, thumb between them',
+  L:'Index up, thumb out making an L-shape',
+  M:'Three fingers draped over thumb',
+  N:'Two fingers draped over thumb',
+  O:'All fingertips and thumb meet in an O',
+  P:'Index pointing downward, thumb extended',
+  Q:'Index and thumb both pointing down',
+  R:'Index and middle fingers crossed',
+  S:'Fist with thumb placed over fingers',
+  T:'Thumb tucked between index and middle',
+  U:'Index and middle up side by side',
+  V:'Index and middle spread in a V',
+  W:'Three fingers spread wide open',
+  X:'Index finger hooked/bent like a hook',
+  Y:'Thumb and pinky extended outward',
+  Z:'Index up, trace Z in the air',
+  '0':'All fingertips meet thumb — O shape',
+  '1':'Only index finger pointing up',
+  '2':'Index and middle spread apart',
+  '3':'Thumb, index and middle out',
+  '4':'Four fingers up, thumb tucked in',
+  '5':'All five fingers spread wide open',
+  '6':'Thumb and pinky touch, others up',
+  '7':'Thumb and ring touch, others up',
+  '8':'Thumb and middle touch, others up',
+  '9':'Thumb and index form a small circle',
+  'Hello':'Open hand wave side to side',
+  'Thank You':'Flat hand from chin moves forward',
+  'Please':'Circular motion on chest',
+  'Sorry':'Fist circles on chest',
+  'Yes':'Fist nods up and down',
+  'No':'Index and middle tap thumb',
+  'Help':'Fist on flat palm, lift up',
+  'Water':'W-hand taps chin twice',
+  'Food':'Flat fingers tap lips',
+  'Good':'Flat hand moves from chin forward',
+  'Bad':'Flat hand flicks downward',
+  'I Love You':'Thumb, index and pinky out (ILY)',
+  'Name':'H-hands tap together',
+  'Friend':'Hook index fingers and swap',
+  'Family':'F-hands circle outward',
+  'Home':'O-hand moves from cheek to temple',
+  'School':'Clap palms together',
+  'Doctor':'Fingertips tap inner wrist',
+  'Where':'Index wagging side to side',
+  'What':'Index wagging with a shrug',
+};
+
+// ═══════════════════════════════════════════════════════
+//  HAND POSES  (21 landmarks × [x,y,z], wrist at origin)
+// ═══════════════════════════════════════════════════════
+function mkOpen(){
+  return [
+    [ 0.00, 0.00, 0.00], // 0  wrist
+    [-0.28,-0.10, 0.00], // 1  thumb cmc
+    [-0.46,-0.22, 0.00], // 2  thumb mcp
+    [-0.60,-0.34, 0.01], // 3  thumb ip
+    [-0.70,-0.48, 0.01], // 4  thumb tip
+    [-0.13, 0.26, 0.00], // 5  index mcp
+    [-0.13, 0.52, 0.00], // 6  index pip
+    [-0.13, 0.70, 0.00], // 7  index dip
+    [-0.13, 0.85, 0.00], // 8  index tip
+    [ 0.04, 0.28, 0.00], // 9  middle mcp
+    [ 0.04, 0.55, 0.00], // 10 middle pip
+    [ 0.04, 0.74, 0.00], // 11 middle dip
+    [ 0.04, 0.90, 0.00], // 12 middle tip
+    [ 0.20, 0.25, 0.00], // 13 ring mcp
+    [ 0.20, 0.51, 0.00], // 14 ring pip
+    [ 0.20, 0.68, 0.00], // 15 ring dip
+    [ 0.20, 0.83, 0.00], // 16 ring tip
+    [ 0.35, 0.18, 0.00], // 17 pinky mcp
+    [ 0.35, 0.41, 0.00], // 18 pinky pip
+    [ 0.35, 0.56, 0.00], // 19 pinky dip
+    [ 0.35, 0.68, 0.00], // 20 pinky tip
+  ];
+}
+
+function mkFist(){
+  const p = mkOpen();
+  // curl each finger: pip moves forward, dip/tip curl under
+  p[6] =[-0.13,0.32, 0.10]; p[7] =[-0.12,0.22, 0.20]; p[8] =[-0.11,0.16, 0.26];
+  p[10]=[ 0.04,0.34, 0.10]; p[11]=[ 0.04,0.24, 0.20]; p[12]=[ 0.04,0.18, 0.26];
+  p[14]=[ 0.20,0.30, 0.10]; p[15]=[ 0.20,0.21, 0.20]; p[16]=[ 0.20,0.15, 0.26];
+  p[18]=[ 0.35,0.26, 0.08]; p[19]=[ 0.35,0.19, 0.16]; p[20]=[ 0.35,0.14, 0.20];
+  p[4] =[-0.12,0.06, 0.04]; // thumb rests on curled fingers
+  return p;
+}
+
+function clone(p){ return p.map(v=>[...v]); }
+
+function curlFinger(p, mcp, pip, dip, tip, amt){
+  const b=p[mcp];
+  p[pip]=[b[0],b[1]+0.07*(1-amt*0.5), 0.10*amt];
+  p[dip]=[b[0],b[1]+0.03*(1-amt*0.8), 0.20*amt];
+  p[tip]=[b[0],b[1]-0.02*amt,          0.24*amt];
+}
+
+function buildAllPoses(){
+  const P={};
+
+  // ── Alphabets ──────────────────────────────────────────────────
+  // A – fist, thumb beside index
+  P.A=mkFist(); P.A[4]=[-0.34,-0.44,0.01];
+
+  // B – 4 fingers up, thumb tucked across palm
+  P.B=mkOpen();
+  P.B[2]=[-0.16,0.04,0.02]; P.B[3]=[-0.08,0.10,0.04]; P.B[4]=[-0.02,0.16,0.05];
+
+  // C – curved C shape
+  P.C=mkOpen();
+  for(const i of [6,7,8,10,11,12,14,15,16,18,19,20]) P.C[i][0]-=0.16, P.C[i][2]+=0.07;
+  P.C[3]=[-0.55,-0.28,0.04]; P.C[4]=[-0.54,-0.44,0.06];
+
+  // D – index up, others touch thumb
+  P.D=mkFist();
+  P.D[6]=[-0.13,0.52,0]; P.D[7]=[-0.13,0.70,0]; P.D[8]=[-0.13,0.85,0];
+  P.D[4]=[ 0.02,0.28,0.04];
+
+  // E – all fingers bent, thumb under
+  P.E=mkOpen();
+  curlFinger(P.E,5,6,7,8,0.75); curlFinger(P.E,9,10,11,12,0.75);
+  curlFinger(P.E,13,14,15,16,0.75); curlFinger(P.E,17,18,19,20,0.75);
+  P.E[4]=[-0.04,0.20,0.06];
+
+  // F – index+thumb circle, others up
+  P.F=mkOpen();
+  const fc=[-0.08,0.16,0.04];
+  P.F[3]=[fc[0]-0.03,fc[1]+0.02,fc[2]]; P.F[4]=[...fc];
+  P.F[6]=[fc[0]+0.02,fc[1]+0.04,fc[2]]; P.F[7]=[fc[0]+0.02,fc[1]+0.02,fc[2]]; P.F[8]=[...fc];
+
+  // G – index sideways, thumb parallel
+  P.G=mkFist();
+  P.G[6]=[-0.42,0.24,0]; P.G[7]=[-0.58,0.24,0]; P.G[8]=[-0.72,0.24,0];
+  P.G[3]=[-0.46,0.10,0.01]; P.G[4]=[-0.62,0.10,0.01];
+
+  // H – index+middle sideways
+  P.H=mkFist();
+  P.H[6]=[-0.40,0.24,0]; P.H[7]=[-0.56,0.24,0]; P.H[8]=[-0.70,0.24,0];
+  P.H[10]=[-0.38,0.12,0]; P.H[11]=[-0.54,0.12,0]; P.H[12]=[-0.68,0.12,0];
+
+  // I – pinky up only
+  P.I=mkFist();
+  P.I[18]=[0.35,0.41,0]; P.I[19]=[0.35,0.56,0]; P.I[20]=[0.35,0.68,0];
+
+  // J – same static pose as I
+  P.J=clone(P.I);
+
+  // K – index+middle up, thumb between
+  P.K=mkFist();
+  P.K[6]=[-0.13,0.52,0]; P.K[7]=[-0.13,0.70,0]; P.K[8]=[-0.13,0.85,0];
+  P.K[10]=[ 0.04,0.55,0]; P.K[11]=[ 0.04,0.74,0]; P.K[12]=[ 0.04,0.90,0];
+  P.K[3]=[-0.03,0.32,0.02]; P.K[4]=[-0.01,0.46,0.04];
+
+  // L – index up, thumb out (L shape)
+  P.L=mkFist();
+  P.L[6]=[-0.13,0.52,0]; P.L[7]=[-0.13,0.70,0]; P.L[8]=[-0.13,0.85,0];
+  P.L[2]=[-0.46,-0.22,0]; P.L[3]=[-0.60,-0.34,0]; P.L[4]=[-0.70,-0.48,0];
+
+  // M – 3 fingers over thumb
+  P.M=mkFist(); P.M[4]=[-0.08,0.12,0.08];
+
+  // N – 2 fingers over thumb  (slightly less fingers visible than M)
+  P.N=mkFist(); P.N[4]=[-0.06,0.10,0.06];
+
+  // O – all tips meet
+  P.O=mkOpen();
+  const oc=[-0.04,0.20,0.06];
+  for(const i of [4,8,12,16,20]) P.O[i]=[oc[0],oc[1],oc[2]];
+  P.O[3]=[oc[0]-0.04,oc[1]+0.04,oc[2]-0.02];
+  P.O[7]=[oc[0]-0.02,oc[1]+0.06,0.03]; P.O[11]=[oc[0]+0.01,oc[1]+0.06,0.03];
+  P.O[15]=[oc[0]+0.04,oc[1]+0.04,0.02]; P.O[19]=[oc[0]+0.06,oc[1]+0.02,0.02];
+
+  // P – index pointing down
+  P.P=mkFist();
+  P.P[6]=[-0.13,-0.18,0]; P.P[7]=[-0.13,-0.34,0]; P.P[8]=[-0.13,-0.48,0];
+  P.P[2]=[-0.46,-0.22,0]; P.P[3]=[-0.60,-0.34,0]; P.P[4]=[-0.70,-0.48,0];
+
+  // Q – index+thumb down
+  P.Q=mkFist();
+  P.Q[6]=[-0.13,-0.18,0]; P.Q[7]=[-0.13,-0.34,0]; P.Q[8]=[-0.13,-0.48,0];
+  P.Q[3]=[-0.26,-0.28,0]; P.Q[4]=[-0.34,-0.44,0.01];
+
+  // R – index+middle crossed
+  P.R=mkFist();
+  P.R[6]=[-0.17,0.50,0]; P.R[7]=[-0.20,0.68,0]; P.R[8]=[-0.22,0.83,0];
+  P.R[10]=[ 0.00,0.52,0]; P.R[11]=[-0.03,0.72,0]; P.R[12]=[-0.08,0.88,0];
+
+  // S – fist, thumb over fingers
+  P.S=mkFist(); P.S[4]=[-0.08,0.05,0.05];
+
+  // T – thumb between index+middle
+  P.T=mkFist(); P.T[4]=[-0.02,0.14,0.08];
+
+  // U – index+middle side by side up
+  P.U=mkFist();
+  P.U[6]=[-0.13,0.52,0]; P.U[7]=[-0.13,0.70,0]; P.U[8]=[-0.13,0.85,0];
+  P.U[10]=[ 0.04,0.55,0]; P.U[11]=[ 0.04,0.74,0]; P.U[12]=[ 0.04,0.90,0];
+
+  // V – index+middle spread in V
+  P.V=mkFist();
+  P.V[6]=[-0.22,0.50,0]; P.V[7]=[-0.26,0.68,0]; P.V[8]=[-0.28,0.82,0];
+  P.V[10]=[ 0.12,0.50,0]; P.V[11]=[ 0.14,0.68,0]; P.V[12]=[ 0.16,0.82,0];
+
+  // W – three fingers spread
+  P.W=mkFist();
+  P.W[6]=[-0.22,0.50,0]; P.W[7]=[-0.26,0.66,0]; P.W[8]=[-0.28,0.80,0];
+  P.W[10]=[ 0.04,0.55,0]; P.W[11]=[ 0.04,0.74,0]; P.W[12]=[ 0.04,0.90,0];
+  P.W[14]=[ 0.26,0.50,0]; P.W[15]=[ 0.28,0.66,0]; P.W[16]=[ 0.30,0.80,0];
+
+  // X – index hooked
+  P.X=mkFist();
+  P.X[6]=[-0.13,0.40,0.06]; P.X[7]=[-0.09,0.28,0.12]; P.X[8]=[-0.07,0.20,0.08];
+
+  // Y – thumb+pinky out
+  P.Y=mkFist();
+  P.Y[2]=[-0.46,-0.22,0]; P.Y[3]=[-0.60,-0.34,0]; P.Y[4]=[-0.70,-0.48,0];
+  P.Y[18]=[0.35,0.41,0]; P.Y[19]=[0.35,0.56,0]; P.Y[20]=[0.35,0.68,0];
+
+  // Z – same as D (dynamic)
+  P.Z=clone(P.D);
+
+  // ── Numbers ────────────────────────────────────────────────────
+  P['0']=clone(P.O);
+  P['1']=clone(P.D); // index up only
+  // 2 = V
+  P['2']=mkFist();
+  P['2'][6]=[-0.20,0.50,0]; P['2'][7]=[-0.24,0.66,0]; P['2'][8]=[-0.26,0.80,0];
+  P['2'][10]=[ 0.10,0.50,0]; P['2'][11]=[ 0.12,0.66,0]; P['2'][12]=[ 0.14,0.80,0];
+  // 3 = thumb+index+middle
+  P['3']=mkFist();
+  P['3'][2]=[-0.46,-0.22,0]; P['3'][3]=[-0.60,-0.34,0]; P['3'][4]=[-0.70,-0.48,0];
+  P['3'][6]=[-0.13,0.52,0]; P['3'][7]=[-0.13,0.70,0]; P['3'][8]=[-0.13,0.85,0];
+  P['3'][10]=[ 0.04,0.55,0]; P['3'][11]=[ 0.04,0.74,0]; P['3'][12]=[ 0.04,0.90,0];
+  // 4 = 4 fingers up, thumb tucked
+  P['4']=mkOpen();
+  P['4'][2]=[-0.16,0.04,0.02]; P['4'][3]=[-0.08,0.10,0.04]; P['4'][4]=[-0.02,0.16,0.05];
+  // 5 = all open
+  P['5']=mkOpen();
+  // 6,7,8,9 = thumb touches respective finger
+  P['6']=mkOpen(); P['6'][4]=[0.28,0.28,0.04]; P['6'][20]=[0.30,0.30,0.04];
+  P['7']=mkOpen(); P['7'][4]=[0.14,0.26,0.04]; P['7'][16]=[0.16,0.28,0.04];
+  P['8']=mkOpen(); P['8'][4]=[0.00,0.24,0.04]; P['8'][12]=[0.02,0.26,0.04];
+  P['9']=clone(P.F);
+
+  // ── Phrases ────────────────────────────────────────────────────
+  P.Hello     = mkOpen();
+  P['Thank You'] = mkOpen(); P['Thank You'].forEach(v=>v[1]-=0.18);
+  P.Please    = mkOpen();
+  P.Sorry     = mkFist(); P.Sorry[4]=[-0.08,0.05,0.05];
+  P.Yes       = mkFist(); P.Yes.forEach(v=>v[1]+=0.04);
+  P.No        = mkFist();
+  P.No[6]=[-0.13,0.52,0]; P.No[7]=[-0.13,0.70,0]; P.No[8]=[-0.13,0.85,0];
+  P.No[10]=[ 0.04,0.55,0]; P.No[11]=[ 0.04,0.74,0]; P.No[12]=[ 0.04,0.90,0];
+  P.Help      = mkFist(); P.Help.forEach(v=>v[1]+=0.08);
+  P.Water     = clone(P.W);
+  P.Food      = clone(P.F);
+  P.Good      = mkOpen(); P.Good.forEach(v=>v[1]-=0.08);
+  P.Bad       = mkOpen(); P.Bad.forEach(v=>v[1]+=0.10);
+  P['I Love You'] = clone(P.Y);
+  P.Name      = clone(P.H);
+  P.Friend    = clone(P.X);
+  P.Family    = clone(P.F);
+  P.Home      = clone(P.O);
+  P.School    = mkOpen();
+  P.Doctor    = clone(P.D);
+  P.Where     = clone(P.D); P.Where[8][0]+=0.06;
+  P.What      = clone(P.D); P.What[8][0]-=0.06;
+
+  return P;
+}
+const POSES = buildAllPoses();
+
+// ═══════════════════════════════════════════════════════
+//  THREE.JS
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x08080f);
+
+const scene  = new THREE.Scene();
+scene.fog    = new THREE.FogExp2(0x08080f, 0.045);
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 50);
+camera.position.set(0, 0.5, 3.8);
+camera.lookAt(0, 0.3, 0);
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const keyL = new THREE.DirectionalLight(0xfff5e0, 1.4);
+keyL.position.set(2, 3, 2); keyL.castShadow=true; scene.add(keyL);
+const fillL = new THREE.DirectionalLight(0x8899ff, 0.5);
+fillL.position.set(-2, 1, 1); scene.add(fillL);
+const rimL = new THREE.DirectionalLight(0xff5500, 0.35);
+rimL.position.set(0,-1,-2); scene.add(rimL);
+
+// Grid
+const grid = new THREE.GridHelper(10, 20, 0x1a1a2e, 0x151520);
+grid.position.y = -1.5; scene.add(grid);
+
+// ── Orbit controls ─────────────────────────────────────
+let drag=false, rDrag=false, prev={x:0,y:0};
+let phi=1.22, theta=0, radius=3.8, tgt=new THREE.Vector3(0,0.3,0);
+
+canvas.addEventListener('mousedown', e=>{drag=true; rDrag=e.button===2; prev={x:e.clientX,y:e.clientY};});
+window.addEventListener('mouseup', ()=>drag=false);
+window.addEventListener('mousemove', e=>{
+  if(!drag) return;
+  const dx=(e.clientX-prev.x)*0.007, dy=(e.clientY-prev.y)*0.007;
+  if(rDrag){ tgt.x-=dx*0.7; tgt.y+=dy*0.7; }
+  else { theta-=dx; phi=Math.max(0.15,Math.min(Math.PI-0.15,phi+dy)); }
+  prev={x:e.clientX,y:e.clientY}; moveCam();
+});
+canvas.addEventListener('wheel', e=>{
+  radius=Math.max(1.2,Math.min(8,radius+e.deltaY*0.004)); moveCam();
+},{passive:true});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+function moveCam(){
+  camera.position.set(
+    tgt.x+radius*Math.sin(phi)*Math.sin(theta),
+    tgt.y+radius*Math.cos(phi),
+    tgt.z+radius*Math.sin(phi)*Math.cos(theta));
+  camera.lookAt(tgt);
+}
+function resetCam(){ phi=1.22; theta=0; radius=3.8; tgt.set(0,0.3,0); moveCam(); }
+
+// ── Hand mesh ──────────────────────────────────────────
+const CONNECTIONS=[
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [0,9],[9,10],[10,11],[11,12],
+  [0,13],[13,14],[14,15],[15,16],
+  [0,17],[17,18],[18,19],[19,20],
+  [5,9],[9,13],[13,17]
+];
+
+const MAT_JOINT = new THREE.MeshStandardMaterial({color:0xe8b57a, roughness:0.45, metalness:0.08});
+const MAT_BONE  = new THREE.MeshStandardMaterial({color:0xf0bc80, roughness:0.5,  metalness:0.05});
+const MAT_NAIL  = new THREE.MeshStandardMaterial({color:0xffdcb0, roughness:0.25, metalness:0.05});
+
+const hGroup = new THREE.Group(); scene.add(hGroup);
+const joints=[], bones=[], nails=[];
+
+function buildMesh(){
+  hGroup.clear(); joints.length=0; bones.length=0; nails.length=0;
+
+  // 21 joints
+  for(let i=0;i<21;i++){
+    const r = i===0?0.072 : (i%4===0?0.044:0.036);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r,14,10), MAT_JOINT);
+    m.castShadow=true; hGroup.add(m); joints.push(m);
+  }
+
+  // Bones (capsule-style: we'll scale a unit cylinder)
+  for(const [a,b] of CONNECTIONS){
+    const m = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.026, 0.022, 1.0, 10),
+      MAT_BONE
+    );
+    m.castShadow=true; hGroup.add(m);
+    bones.push({mesh:m,a,b});
+  }
+
+  // Nails
+  for(const tip of [4,8,12,16,20]){
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.042,0.014,0.052), MAT_NAIL);
+    hGroup.add(m); nails.push({mesh:m,tip});
+  }
+}
+
+const _up = new THREE.Vector3(0,1,0);
+const _dir = new THREE.Vector3();
+const _mid = new THREE.Vector3();
+const _qa  = new THREE.Quaternion();
+
+function applyPose(lms){
+  const S = 1.35; // display scale
+  const pts = lms.map(v=>new THREE.Vector3(v[0]*S, v[1]*S, v[2]*S));
+
+  // Joints
+  for(let i=0;i<21;i++) joints[i].position.copy(pts[i]);
+
+  // Bones — stretch cylinder to connect two joints
+  for(const {mesh,a,b} of bones){
+    const pa=pts[a], pb=pts[b];
+    _dir.subVectors(pb,pa);
+    const len=_dir.length();
+    if(len<0.001){mesh.visible=false;continue;}
+    mesh.visible=true;
+    _mid.addVectors(pa,pb).multiplyScalar(0.5);
+    mesh.position.copy(_mid);
+    // Scale Y to match the length (geometry is unit height=1)
+    mesh.scale.set(1,len,1);
+    _qa.setFromUnitVectors(_up, _dir.clone().normalize());
+    mesh.quaternion.copy(_qa);
+  }
+
+  // Nails
+  for(const {mesh,tip} of nails){
+    mesh.position.copy(pts[tip]);
+    mesh.position.y+=0.015;
+  }
+}
+
+// ── Animation state ────────────────────────────────────
+let curSign='A', curPose=POSES.A.map(v=>[...v]), tgtPose=POSES.A.map(v=>[...v]);
+let animT=1, spd=1.0, waveT=0;
+let autoOn=false, autoTimer=null, autoIdx=0, autoList=[...ALL];
+
+function lerp(a,b,t){ return a+(b-a)*t; }
+function easeInOut(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+function lerpPose(from,to,t){
+  return from.map((f,i)=>f.map((v,j)=>lerp(v,to[i][j],t)));
+}
+
+function selectSign(sign){
+  curSign=sign;
+  const pose=POSES[sign]; if(!pose) return;
+  tgtPose=pose; animT=0;
+  // Update badge
+  document.getElementById('bSign').textContent = sign.length<=2?sign:sign[0];
+  document.getElementById('bCat').textContent  =
+    ALPHA.includes(sign)?'Alphabet':NUMS.includes(sign)?'Number':'Phrase';
+  document.getElementById('bDesc').textContent = DESC[sign]||'';
+  // Highlight list
+  document.querySelectorAll('.sb-item').forEach(el=>{
+    el.classList.toggle('on', el.dataset.sign===sign);
+  });
+}
+
+// ── Animation loop ─────────────────────────────────────
+let raf, lastT=0;
+function loop(ts){
+  raf=requestAnimationFrame(loop);
+  const dt=Math.min((ts-lastT)/1000, 0.1); lastT=ts;
+
+  // Interpolate pose
+  if(animT<1){
+    animT=Math.min(1,animT+dt*2.5*spd);
+    curPose=lerpPose(curPose,tgtPose,easeInOut(animT));
+  }
+
+  // Overlay motion for dynamic signs
+  let display=curPose.map(v=>[...v]);
+  waveT+=dt*2.8*spd;
+  const sw=Math.sin(waveT);
+  if(curSign==='Hello'||curSign==='Where'||curSign==='What')
+    display.forEach(v=>v[0]+=sw*0.12);
+  if(curSign==='Yes')
+    display.forEach(v=>v[1]+=sw*0.10);
+  if(curSign==='No')
+    display.forEach(v=>v[0]+=sw*0.14);
+  if(curSign==='Sorry'||curSign==='Please'){
+    const c=waveT; display.forEach(v=>{v[0]+=Math.sin(c)*0.08; v[1]+=Math.cos(c)*0.06;});
+  }
+
+  applyPose(display);
+
+  // Gentle float
+  hGroup.position.y = Math.sin(ts*0.0005)*0.03;
+  hGroup.rotation.y = Math.sin(ts*0.0003)*0.015;
+
+  renderer.render(scene,camera);
+}
+
+// ── Resize ─────────────────────────────────────────────
+function resize(){
+  const c=document.querySelector('.centre');
+  const w=c.clientWidth, h=c.clientHeight-52;
+  renderer.setSize(w,h);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(document.querySelector('.centre'));
+
+// ── Controls ───────────────────────────────────────────
+let animPaused=false;
+function toggleAnim(){
+  animPaused=!animPaused;
+  if(animPaused){ cancelAnimationFrame(raf); }
+  else { lastT=performance.now(); loop(lastT); }
+  document.getElementById('btnAnim').classList.toggle('on',animPaused);
+  document.getElementById('btnAnim').textContent=animPaused?'⏸ Paused':'▶ Animate';
+}
+function toggleAuto(){
+  autoOn=!autoOn;
+  document.getElementById('btnAuto').classList.toggle('on',autoOn);
+  if(autoOn){ autoIdx=0; runAuto(); }
+  else clearTimeout(autoTimer);
+}
+function runAuto(){
+  if(!autoOn) return;
+  if(autoIdx>=autoList.length) autoIdx=0;
+  selectSign(autoList[autoIdx++]);
+  const delay=PHRASE.includes(autoList[autoIdx-1])?3200:1600;
+  autoTimer=setTimeout(runAuto,delay/spd);
+}
+function speak(){
+  const u=new SpeechSynthesisUtterance(curSign);
+  u.lang='en-IN'; u.rate=0.9;
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+
+// ── Sign list ──────────────────────────────────────────
+let tab='all', q='';
+
+function buildList(){
+  let signs=ALL;
+  if(tab==='alpha')  signs=ALPHA;
+  else if(tab==='num')    signs=NUMS;
+  else if(tab==='phrase') signs=PHRASE;
+  if(q) signs=signs.filter(s=>s.toLowerCase().includes(q));
+  autoList=[...signs];
+
+  const el=document.getElementById('list');
+  el.innerHTML=signs.map(s=>{
+    const cat=ALPHA.includes(s)?'Alphabet':NUMS.includes(s)?'Number':'Phrase';
+    const key=s.length<=2?s:s[0];
+    return `<button class="sb-item${s===curSign?' on':''}" data-sign="${s}" onclick="selectSign('${s.replace(/'/g,"\\'")}')">
+      <span class="sb-key">${key}</span>
+      <span class="sb-info"><span class="sb-name">${s}</span><span class="sb-cat">${cat}</span></span>
+    </button>`;
+  }).join('');
+}
+
+function setTab(t,el){
+  tab=t;
+  document.querySelectorAll('.sbtab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  buildList();
+}
+function filterList(){ q=document.getElementById('srch').value.toLowerCase(); buildList(); }
+
+// ── Boot ───────────────────────────────────────────────
+buildMesh();
+buildList();
+selectSign('A');
+resize();
+moveCam();
+lastT=performance.now();
+loop(lastT);
+</script>
+</body>
+</html>

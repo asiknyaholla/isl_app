@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Detection — ISLBridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --paper: #f5f2ec;
+  --saffron: #FF6B00;
+  --teal: #00897B;
+  --gold: #F9A825;
+  --surface: #ffffff;
+  --border: rgba(10,10,15,0.1);
+  --muted: #6b6b7a;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); }
+
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.2rem 2.5rem;
+  background: rgba(245,242,236,0.9); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50;
+}
+.nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--ink); text-decoration: none; }
+.nav-logo span { color: var(--saffron); }
+.nav-links a { text-decoration: none; color: var(--ink); font-weight: 500; padding: 0.5rem 1rem; border-radius: 100px; font-size: 0.9rem; transition: all 0.2s; margin-left: 0.3rem; }
+.nav-links a:hover { background: var(--ink); color: var(--paper); }
+.nav-links a.active { background: var(--saffron); color: white; }
+
+.page-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 0;
+  min-height: calc(100vh - 65px);
+}
+
+/* LEFT: CAMERA */
+.camera-side {
+  padding: 2rem;
+  display: flex; flex-direction: column; gap: 1.5rem;
+}
+.camera-header h1 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.8rem; }
+.camera-header p { color: var(--muted); margin-top: 0.3rem; }
+
+.camera-container {
+  position: relative;
+  background: var(--ink);
+  border-radius: 20px; overflow: hidden;
+  aspect-ratio: 16/9; max-height: 500px;
+}
+#videoFeed, #canvasOverlay {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+#canvasOverlay { pointer-events: none; }
+#processedImg {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  display: none;
+}
+
+.camera-placeholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.4); gap: 1rem;
+}
+.camera-placeholder-icon { font-size: 4rem; opacity: 0.4; }
+
+.detection-badge {
+  position: absolute; top: 1rem; left: 1rem;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+  color: white; padding: 0.5rem 1rem; border-radius: 100px;
+  font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+}
+.detection-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+.detection-dot.active { background: #4CAF50; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.confidence-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 4px; background: rgba(255,255,255,0.1);
+}
+.confidence-fill {
+  height: 100%; background: linear-gradient(90deg, var(--saffron), var(--gold));
+  transition: width 0.5s ease; width: 0%;
+}
+
+.camera-controls {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+}
+.btn {
+  padding: 0.75rem 1.5rem; border-radius: 100px; border: none; cursor: pointer;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.9rem;
+  display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;
+}
+.btn-start { background: var(--ink); color: white; }
+.btn-start:hover { background: var(--saffron); }
+.btn-stop { background: rgba(244,67,54,0.1); color: #f44336; }
+.btn-stop:hover { background: #f44336; color: white; }
+.btn-clear { background: rgba(0,0,0,0.06); color: var(--ink); }
+.btn-clear:hover { background: rgba(0,0,0,0.12); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* SETTINGS BAR */
+.settings-bar {
+  display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+  background: white; padding: 1rem 1.5rem; border-radius: 16px;
+  border: 1px solid var(--border);
+}
+.setting-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.setting-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+select {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.5rem 0.75rem; font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem; background: white; cursor: pointer;
+  color: var(--ink); outline: none;
+}
+select:focus { border-color: var(--saffron); }
+
+/* MODE PILLS */
+.mode-pills { display: flex; gap: 0.4rem; }
+.mode-pill {
+  padding: 0.4rem 0.9rem; border-radius: 100px; border: 1px solid var(--border);
+  font-size: 0.8rem; font-weight: 600; cursor: pointer; background: white;
+  transition: all 0.2s; color: var(--muted);
+}
+.mode-pill.active { background: var(--ink); color: white; border-color: var(--ink); }
+
+/* RIGHT: PANEL */
+.results-side {
+  background: var(--ink); color: white;
+  display: flex; flex-direction: column;
+  border-left: 1px solid rgba(255,255,255,0.08);
+}
+.results-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.results-header h2 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; }
+.results-header p { color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-top: 0.3rem; }
+
+/* MAIN DETECTION DISPLAY */
+.main-detection {
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  min-height: 180px; display: flex; flex-direction: column; justify-content: center;
+}
+.detected-sign {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 5rem; line-height: 1;
+  background: linear-gradient(135deg, var(--saffron), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  transition: all 0.3s;
+}
+.detected-sign.empty { color: rgba(255,255,255,0.1); -webkit-text-fill-color: rgba(255,255,255,0.1); background: none; }
+.detected-translation {
+  font-size: 1.4rem; color: rgba(255,255,255,0.6);
+  margin-top: 0.5rem; font-weight: 300; min-height: 2rem;
+}
+.confidence-text { font-size: 0.8rem; color: rgba(255,255,255,0.3); margin-top: 0.3rem; }
+
+/* TTS BUTTON */
+.tts-btn {
+  margin-top: 1rem; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1); color: white;
+  padding: 0.6rem 1.2rem; border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.85rem;
+  cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
+  width: fit-content;
+}
+.tts-btn:hover { background: rgba(255,107,0,0.2); border-color: var(--saffron); }
+
+/* HISTORY */
+.history-section { padding: 1.5rem 2rem; flex: 1; overflow-y: auto; }
+.history-title {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 1rem;
+}
+.history-items { display: flex; flex-direction: column; gap: 0.5rem; }
+.history-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem; border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn { from{opacity:0;transform:translateX(10px)} to{opacity:1;transform:translateX(0)} }
+.hi-sign {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem;
+  color: var(--saffron); min-width: 40px;
+}
+.hi-info { flex: 1; }
+.hi-translation { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
+.hi-conf { font-size: 0.72rem; color: rgba(255,255,255,0.25); margin-top: 0.2rem; }
+.hi-time { font-size: 0.7rem; color: rgba(255,255,255,0.2); white-space: nowrap; }
+
+/* SENTENCE BUILDER */
+.sentence-section {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.sentence-title {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 0.75rem;
+}
+.sentence-display {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 0.75rem 1rem; min-height: 50px;
+  font-size: 1rem; color: white; line-height: 1.5; word-break: break-all;
+}
+.sentence-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+.mini-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6); padding: 0.4rem 0.75rem; border-radius: 6px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.mini-btn:hover { background: rgba(255,107,0,0.2); color: white; }
+
+/* INSTRUCTION BOX */
+.instruction-box {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.inst-item { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.6rem; font-size: 0.82rem; color: rgba(255,255,255,0.35); }
+.inst-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 1px; }
+
+@media (max-width: 1024px) {
+  .page-layout { grid-template-columns: 1fr; }
+  .results-side { min-height: auto; }
+}
+@media (max-width: 640px) {
+  nav { padding: 1rem 1rem; }
+  .camera-side { padding: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">ISL<span>Bridge</span></a>
+    <div class="nav-links">
+    <a href="/">🏠 Home</a>
+    <a href="/detect">🎥 Detect</a>
+    <a href="/dictionary">📖 Dictionary</a>
+    <a href="/avatar">🤖 3D Avatar</a>
+  </div>
+</nav>
+
+<div class="page-layout">
+  <!-- LEFT: CAMERA -->
+  <div class="camera-side">
+    <div class="camera-header">
+      <h1>Live ISL Detection</h1>
+      <p>Position your hand clearly in front of the camera and perform a sign</p>
+    </div>
+
+    <div class="camera-container" id="cameraBox">
+      <video id="videoFeed" autoplay muted playsinline></video>
+      <canvas id="canvasOverlay"></canvas>
+      <img id="processedImg" alt="Processed">
+      <div class="camera-placeholder" id="placeholder">
+        <div class="camera-placeholder-icon">📷</div>
+        <div>Click "Start Camera" to begin</div>
+        <div style="font-size:0.8rem; opacity:0.5">Webcam access required</div>
+      </div>
+      <div class="detection-badge" id="detBadge">
+        <div class="detection-dot" id="detDot"></div>
+        <span id="detStatus">Inactive</span>
+      </div>
+      <div class="confidence-bar"><div class="confidence-fill" id="confFill"></div></div>
+    </div>
+
+    <div class="camera-controls">
+      <button class="btn btn-start" id="startBtn" onclick="startCamera()">▶ Start Camera</button>
+      <button class="btn btn-stop" id="stopBtn" onclick="stopCamera()" disabled>⏹ Stop</button>
+      <button class="btn btn-clear" onclick="clearHistory()">🗑 Clear History</button>
+    </div>
+
+    <div class="settings-bar">
+      <div class="setting-group">
+        <div class="setting-label">Output Language</div>
+        <select id="langSelect" onchange="updateLanguage()">
+          <option value="en">English</option>
+          <option value="hi">हिंदी (Hindi)</option>
+          <option value="ta">தமிழ் (Tamil)</option>
+          <option value="te">తెలుగు (Telugu)</option>
+          <option value="kn">ಕನ್ನಡ (Kannada)</option>
+          <option value="ml">മലയാളം (Malayalam)</option>
+          <option value="bn">বাংলা (Bengali)</option>
+          <option value="mr">मराठी (Marathi)</option>
+          <option value="gu">ગુજરાતી (Gujarati)</option>
+          <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Detection Mode</div>
+        <div class="mode-pills">
+          <div class="mode-pill active" onclick="setMode('all', this)">All</div>
+          <div class="mode-pill" onclick="setMode('alpha', this)">A-Z</div>
+          <div class="mode-pill" onclick="setMode('num', this)">0-9</div>
+          <div class="mode-pill" onclick="setMode('phrase', this)">Phrases</div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Auto-Speech</div>
+        <div class="mode-pills">
+          <div class="mode-pill" id="ttsToggle" onclick="toggleTTS(this)">OFF</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: RESULTS -->
+  <div class="results-side">
+    <div class="results-header">
+      <h2>Detection Results</h2>
+      <p>Real-time sign language output</p>
+    </div>
+
+    <div class="main-detection">
+      <div class="detected-sign empty" id="mainSign">—</div>
+      <div class="detected-translation" id="mainTranslation"></div>
+      <div class="confidence-text" id="mainConf"></div>
+      <button class="tts-btn" id="ttsBtn" onclick="speakCurrent()" style="display:none">
+        🔊 Speak
+      </button>
+    </div>
+
+    <div class="history-section">
+      <div class="history-title">Detection History</div>
+      <div class="history-items" id="historyItems">
+        <div style="color:rgba(255,255,255,0.2); font-size:0.85rem; text-align:center; padding:2rem 0;">
+          History will appear here...
+        </div>
+      </div>
+    </div>
+
+    <div class="sentence-section">
+      <div class="sentence-title">Sentence Builder</div>
+      <div class="sentence-display" id="sentenceDisplay">&#8203;</div>
+      <div class="sentence-actions">
+        <button class="mini-btn" onclick="addSpace()">+ Space</button>
+        <button class="mini-btn" onclick="addToSentence()">+ Add Sign</button>
+        <button class="mini-btn" onclick="speakSentence()">🔊 Speak</button>
+        <button class="mini-btn" onclick="clearSentence()">✕ Clear</button>
+      </div>
+    </div>
+
+    <div class="instruction-box">
+      <div class="inst-item"><span class="inst-icon">💡</span> Keep hand well-lit and centred in frame</div>
+      <div class="inst-item"><span class="inst-icon">📏</span> Maintain 30–60 cm distance from camera</div>
+      <div class="inst-item"><span class="inst-icon">✋</span> Hold each sign steady for 1–2 seconds</div>
+      <div class="inst-item"><span class="inst-icon">🌟</span> Plain light background improves accuracy</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let stream = null;
+let isDetecting = false;
+let detectionInterval = null;
+let currentLanguage = 'en';
+let detectionMode = 'all';
+let autoTTS = false;
+let currentSign = null;
+let currentTranslation = null;
+let history = [];
+let sentence = [];
+
+const LANG_CODES = {
+  'en': 'en-IN', 'hi': 'hi-IN', 'ta': 'ta-IN', 'te': 'te-IN',
+  'kn': 'kn-IN', 'ml': 'ml-IN', 'bn': 'bn-IN', 'mr': 'mr-IN',
+  'gu': 'gu-IN', 'pa': 'pa-IN'
+};
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: 'user' } });
+    const video = document.getElementById('videoFeed');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = false;
+    document.getElementById('detDot').classList.add('active');
+    document.getElementById('detStatus').textContent = 'Detecting...';
+    isDetecting = true;
+    startDetectionLoop();
+  } catch (err) {
+    alert('Camera access denied. Please allow webcam permission.');
+    console.error(err);
+  }
+}
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  isDetecting = false;
+  clearInterval(detectionInterval);
+  document.getElementById('videoFeed').style.display = 'none';
+  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('detDot').classList.remove('active');
+  document.getElementById('detStatus').textContent = 'Inactive';
+  document.getElementById('confFill').style.width = '0%';
+}
+
+function startDetectionLoop() {
+  detectionInterval = setInterval(captureAndDetect, 1500);
+}
+
+async function captureAndDetect() {
+  if (!isDetecting) return;
+  const video = document.getElementById('videoFeed');
+  if (video.readyState < 2) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const imageData = canvas.toDataURL('image/jpeg', 0.7);
+
+  try {
+    const resp = await fetch('/api/process_frame', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: imageData, language: currentLanguage, mode: detectionMode })
+    });
+    const data = await resp.json();
+    if (data.gesture) {
+      updateDetection(data.gesture, data.confidence, data.translation);
+    }
+  } catch (e) {
+    console.error('Detection error:', e);
+  }
+}
+
+function updateDetection(sign, confidence, translation) {
+  currentSign = sign;
+  currentTranslation = translation || sign;
+
+  const mainSign = document.getElementById('mainSign');
+  mainSign.textContent = sign;
+  mainSign.classList.remove('empty');
+
+  const displayText = translation || sign;
+  document.getElementById('mainTranslation').textContent = displayText;
+  document.getElementById('mainConf').textContent = `Confidence: ${confidence}%`;
+  document.getElementById('confFill').style.width = confidence + '%';
+  document.getElementById('ttsBtn').style.display = 'flex';
+
+  // Add to history
+  addToHistory(sign, translation, confidence);
+
+  // Auto TTS
+  if (autoTTS) speak(displayText);
+}
+
+function addToHistory(sign, translation, confidence) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  history.unshift({ sign, translation, confidence, time: timeStr });
+  if (history.length > 20) history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById('historyItems');
+  if (history.length === 0) {
+    container.innerHTML = '<div style="color:rgba(255,255,255,0.2);font-size:0.85rem;text-align:center;padding:2rem 0">History will appear here...</div>';
+    return;
+  }
+  container.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div class="hi-sign">${h.sign.length > 3 ? h.sign[0] : h.sign}</div>
+      <div class="hi-info">
+        <div style="font-size:0.9rem;font-weight:600">${h.sign}</div>
+        <div class="hi-translation">${h.translation || h.sign}</div>
+        <div class="hi-conf">Confidence: ${h.confidence}%</div>
+      </div>
+      <div class="hi-time">${h.time}</div>
+    </div>
+  `).join('');
+}
+
+function clearHistory() {
+  history = [];
+  renderHistory();
+  currentSign = null;
+  document.getElementById('mainSign').textContent = '—';
+  document.getElementById('mainSign').classList.add('empty');
+  document.getElementById('mainTranslation').textContent = '';
+  document.getElementById('mainConf').textContent = '';
+  document.getElementById('confFill').style.width = '0%';
+  document.getElementById('ttsBtn').style.display = 'none';
+}
+
+function updateLanguage() {
+  currentLanguage = document.getElementById('langSelect').value;
+}
+
+function setMode(mode, el) {
+  detectionMode = mode;
+  document.querySelectorAll('.mode-pill').forEach(p => {
+    if (p.parentElement === el.parentElement) p.classList.remove('active');
+  });
+  el.classList.add('active');
+}
+
+function toggleTTS(el) {
+  autoTTS = !autoTTS;
+  el.textContent = autoTTS ? 'ON' : 'OFF';
+  el.classList.toggle('active', autoTTS);
+}
+
+function speakCurrent() {
+  if (currentTranslation || currentSign) {
+    speak(currentTranslation || currentSign);
+  }
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  const langCode = LANG_CODES[currentLanguage] || 'en-IN';
+  utterance.lang = langCode;
+  utterance.rate = 0.9;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
+}
+
+function addToSentence() {
+  if (currentSign) {
+    sentence.push(currentSign);
+    renderSentence();
+  }
+}
+
+function addSpace() {
+  sentence.push(' ');
+  renderSentence();
+}
+
+function clearSentence() {
+  sentence = [];
+  renderSentence();
+}
+
+function speakSentence() {
+  const text = sentence.join('');
+  if (text.trim()) speak(text);
+}
+
+function renderSentence() {
+  const display = document.getElementById('sentenceDisplay');
+  display.textContent = sentence.join('') || '\u200B';
+}
+</script>
+</body>
+</html>
